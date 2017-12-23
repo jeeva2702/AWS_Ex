@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "171165077739",
+    "project_id": "firebase-awsex"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:171165077739:android:f175cc22e8a7f065",
+        "android_client_info": {
+          "package_name": "com.example.user.awsex"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "171165077739-uh9pvku3l77katccg1f6lon53joka1si.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.user.awsex",
+            "certificate_hash": "f30470ac63a236d892ff7e05e638d42277cb39c8"
+          }
+        },
+        {
+          "client_id": "171165077739-b3a6t6u90loornlk46lo3b9ceidardfl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrV-4dByF3-fMzgdc8YwCNj7raO999dLo"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
