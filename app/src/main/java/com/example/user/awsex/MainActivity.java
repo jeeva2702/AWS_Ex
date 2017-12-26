@@ -29,10 +29,10 @@ public class MainActivity extends AppCompatActivity {
         e2=(EditText)findViewById(R.id.editText);
 
 
-         credentials= new CognitoCachingCredentialsProvider(getApplicationContext(), "ap-south-1:30b9dbde-1fa0-4636-abc7-161337917185", Regions.AP_SOUTH_1);
+         credentials= new CognitoCachingCredentialsProvider(getApplicationContext(), "us-west-2:20e04e1d-cd9d-46ca-9305-93fe4f13f312", Regions.US_WEST_2);
 
 
-      syncClient= new CognitoSyncManager(getApplicationContext(),Regions.AP_SOUTH_1,credentials);
+      syncClient= new CognitoSyncManager(getApplicationContext(),Regions.US_WEST_2,credentials);
 
 
         b2.setOnClickListener(new View.OnClickListener() {

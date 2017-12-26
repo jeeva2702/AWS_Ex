@@ -31,13 +31,17 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.example.user.awsex.DynamoDb.DynamoDB;
 import com.example.user.awsex.Rekognition.Img_Compare;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Main2Activity extends AppCompatActivity {
 
@@ -53,7 +57,7 @@ public class Main2Activity extends AppCompatActivity {
     ImageView img;
     CognitoCachingCredentialsProvider credentialsProvider;
     CognitoSyncManager syncManager;
-    Button b1,b2,b3;
+    Button b1,b2,b3,b4;
     AmazonS3 s3;
     EditText keyedit;
     TransferUtility transferUtility;
@@ -66,10 +70,11 @@ public class Main2Activity extends AppCompatActivity {
         b1=(Button)findViewById(R.id.button4);
         b2=(Button)findViewById(R.id.download);
         b3=(Button)findViewById(R.id.compare);
+        b4=(Button)findViewById(R.id.db);
         keyedit=(EditText)findViewById(R.id.editText3);
         credentialsProvider=new CognitoCachingCredentialsProvider(getApplicationContext(),
-                "ap-south-1:30b9dbde-1fa0-4636-abc7-161337917185",
-                Regions.AP_SOUTH_1);
+                "us-west-2:20e04e1d-cd9d-46ca-9305-93fe4f13f312",
+                Regions.US_WEST_2);
 
 
         s3=new AmazonS3Client(credentialsProvider);
@@ -120,6 +125,12 @@ public class Main2Activity extends AppCompatActivity {
                 startActivity(new Intent(Main2Activity.this, Img_Compare.class));
             }
         });
+        b4.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(Main2Activity.this, DynamoDB.class));
+            }
+        });
     }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -149,14 +160,21 @@ public class Main2Activity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(String... strings) {
-            s3.setRegion(Region.getRegion(Regions.AP_SOUTH_1));
+            s3.setRegion(Region.getRegion(Regions.US_WEST_2));
             String key=keyedit.getText().toString();
             transferUtility =new TransferUtility(s3,getBaseContext());
-            TransferObserver transferObserver=transferUtility.upload(
-                    "myfirstappbow",
-                    key,
-                    new File(Path)
-            );
+            ObjectMetadata metadata=new ObjectMetadata();
+            Map<String, String> usermetadata= new HashMap<>();
+            usermetadata.put("imgRek",key);
+
+            metadata.setUserMetadata(usermetadata);
+
+            TransferObserver transferObserver=transferUtility.upload("awsreg",key,new File(Path),metadata);
+//            TransferObserver transferObserver=transferUtility.upload(
+//                    "awsreg",
+//                    key,
+//                    new File(Path)
+//            );
             transferObserver.setTransferListener(new TransferListener(){
                 @Override
                 public void onStateChanged(int id, TransferState state) {
@@ -187,6 +205,12 @@ public class Main2Activity extends AppCompatActivity {
                     // do something
                     Log.d("log", "error in uploading. id = "+id+"\nException = "+ex);
                     System.out.println(" ERROR "+ex);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(Main2Activity.this, "Error in uploading..", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 }
             });
             return null;
@@ -199,10 +223,10 @@ public class Main2Activity extends AppCompatActivity {
         @Override
         protected String doInBackground(String... strings) {
             String key=keyedit.getText().toString();
-            s3.setRegion(Region.getRegion(Regions.AP_SOUTH_1));
+            s3.setRegion(Region.getRegion(Regions.US_WEST_2));
             TransferUtility transferUtility = new TransferUtility(s3, getBaseContext());
             TransferObserver observer = transferUtility.download(
-                    "myfirstappbow",      /* The bucket to upload to */
+                    "awsreg",      /* The bucket to upload to */
                     key,     /* The key for the uploaded object */
                     new File("/storage/emulated/0/AWS/"+key+".jpg")        /* The file where the data to upload exists */
             );
