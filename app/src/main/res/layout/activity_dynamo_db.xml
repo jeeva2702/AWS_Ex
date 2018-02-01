@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.user.awsex.DynamoDb.DynamoDB">
+    tools:context="com.example.user.awsex.DynamoDb.dynamo_db">
 
     <EditText
         android:id="@+id/BookName"
@@ -68,4 +68,25 @@
         android:gravity="center"
         android:hint="Table Title"
         android:inputType="textPersonName" />
+
+    <Button
+        android:id="@+id/retrieve"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/submit"
+        android:layout_alignParentBottom="true"
+        android:layout_alignStart="@+id/submit"
+        android:layout_marginBottom="33dp"
+        android:text="retrieve" />
+
+    <Button
+        android:id="@+id/bow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/list"
+        android:layout_marginLeft="23dp"
+        android:layout_marginStart="23dp"
+        android:layout_toEndOf="@+id/submit"
+        android:layout_toRightOf="@+id/submit"
+        android:text="Button" />
 </RelativeLayout>

@@ -29,7 +29,8 @@
             <TextView
                 android:id="@+id/username"
                 android:layout_width="match_parent"
-                android:layout_height="30dp" />
+                android:layout_height="30dp"
+                android:background="@android:color/background_light" />
 
             <TextView
                 android:id="@+id/email"

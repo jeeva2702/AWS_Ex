@@ -1,6 +1,7 @@
 package com.example.user.awsex.GoogleSignIn;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.example.user.awsex.DynamoDb.dynamo_db;
 import com.example.user.awsex.R;
 import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -48,7 +50,7 @@ public class GSignIn extends AppCompatActivity implements View.OnClickListener, 
          SignIn.setOnClickListener(this);
          b1.setOnClickListener(this);
 
-         ll.setVisibility(View.GONE);
+         ll.setVisibility(View.VISIBLE);
         GoogleSignInOptions signInOptions=new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).requestEmail().build();
 
         googleApiClient=new GoogleApiClient.Builder(this).enableAutoManage(this,this).addApi(Auth.GOOGLE_SIGN_IN_API,signInOptions).build();
@@ -72,6 +74,7 @@ public class GSignIn extends AppCompatActivity implements View.OnClickListener, 
 
     private void signin(){
           Intent intent= Auth.GoogleSignInApi.getSignInIntent(googleApiClient);
+
           startActivityForResult(intent,Req_code);
     }
     private void signout(){
@@ -99,6 +102,16 @@ public class GSignIn extends AppCompatActivity implements View.OnClickListener, 
            user.setText(name);
            Glide.with(this).load(imgurl).into(propic);
            updateUI(true);
+           SharedPreferences sharedPreferences=getSharedPreferences("User", MODE_PRIVATE);
+           SharedPreferences.Editor edit=sharedPreferences.edit();
+           edit.putString("umail",account.getEmail());
+           edit.putString("dispname",account.getDisplayName());
+           edit.putString("imgurl",account.getPhotoUrl().toString());
+           edit.putString("name",account.getGivenName());
+
+           edit.commit();
+
+           startActivity(new Intent(GSignIn.this, dynamo_db.class));
 
        }
        else{
@@ -108,10 +121,10 @@ public class GSignIn extends AppCompatActivity implements View.OnClickListener, 
     private void updateUI(Boolean islogin){
        if(islogin){
            ll.setVisibility(View.VISIBLE);
-           SignIn.setVisibility(View.GONE);
+           SignIn.setVisibility(View.VISIBLE);
        }
        else{
-           ll.setVisibility(View.GONE);
+           ll.setVisibility(View.VISIBLE);
            SignIn.setVisibility(View.VISIBLE);
        }
     }

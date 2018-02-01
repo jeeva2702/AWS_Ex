@@ -1,8 +1,8 @@
 package com.example.user.awsex.DynamoDb;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.support.v4.media.AudioAttributesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -12,11 +12,8 @@ import android.widget.Toast;
 
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapperFieldModel;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBTable;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -24,31 +21,33 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.CreateTableResult;
 import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
-import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ListTablesResult;
-import com.amazonaws.services.dynamodbv2.model.Projection;
-import com.amazonaws.services.dynamodbv2.model.ProjectionType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.PutItemResult;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
+import com.amazonaws.services.dynamodbv2.model.ScanResult;
+import com.amazonaws.services.dynamodbv2.model.StreamSpecification;
+import com.amazonaws.services.dynamodbv2.model.StreamViewType;
+import com.example.user.awsex.GoogleSignIn.GSignIn;
 import com.example.user.awsex.R;
-import com.amazonaws.services.dynamodbv2.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DynamoDB extends AppCompatActivity {
+public class dynamo_db extends AppCompatActivity {
 
     AmazonDynamoDBClient ddb;
-    Button submit,list,retrieve;
+    Button submit,list,retrieve,bow;
     EditText bn,rat,title;
     static String tit;
+
 
     SharedPreferences sharedPreferences;
     SharedPreferences.Editor editor;
@@ -77,14 +76,29 @@ public class DynamoDB extends AppCompatActivity {
         bn=(EditText)findViewById(R.id.BookName);
         rat=(EditText)findViewById(R.id.Ratings);
         retrieve=(Button)findViewById(R.id.retrieve);
+        bow=(Button)findViewById(R.id.bow);
+
 
         sharedPreferences = getSharedPreferences("User",MODE_PRIVATE);
+
+
 
 
         list.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 new DDB_MyTask().execute();
+            }
+        });
+
+        bow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                SharedPreferences sharedPreferences= getSharedPreferences("User",MODE_PRIVATE);
+                SharedPreferences.Editor editor =sharedPreferences.edit();
+                editor.clear();
+                editor.commit();
+                startActivity(new Intent(dynamo_db.this, GSignIn.class));
             }
         });
 
@@ -177,20 +191,23 @@ public class DynamoDB extends AppCompatActivity {
             CreateTableRequest request=new CreateTableRequest().withTableName(username)
                     .withAttributeDefinitions(attributeDefinitions)
                     .withKeySchema(keySchemaElements)
-
+                    .withStreamSpecification(new StreamSpecification().withStreamEnabled(Boolean.TRUE).withStreamViewType(StreamViewType.NEW_AND_OLD_IMAGES))
                     .withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
 
             try{
                 CreateTableResult result=ddb.createTable(request);
-                System.out.println("Result Of Table Creation : "+ result.getTableDescription());
-                new AddItem_Task().execute();
+                System.out.println("Result Of Table Creation : "+ result.getTableDescription()+ ddb.listTables());
+
+                    new AddItem_Task().execute();
+
+
             }catch (final ResourceInUseException e){
                 System.out.println("Error : "+ e.getErrorMessage());
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(DynamoDB.this, e.getErrorMessage(), Toast.LENGTH_SHORT).show();
-                        new AddItem_Task().execute();
+                        Toast.makeText(dynamo_db.this, e.getErrorMessage(), Toast.LENGTH_SHORT).show();
+
                     }
                 });
             }
@@ -236,13 +253,33 @@ public class DynamoDB extends AppCompatActivity {
 
 
             System.out.println("Map Values are : "+ data);
+            List<String> tablees=ddb.listTables().getTableNames();
+
+            System.out.println("Tables : "+tablees);
 
 
-            PutItemRequest putItemRequest=new PutItemRequest().withTableName(username).withItem(data);
+                PutItemRequest putItemRequest=new PutItemRequest().withTableName(username).withItem(data);
 //            ddb.putItem(putItemRequest);
+                try{
+                    PutItemResult result=ddb.putItem(putItemRequest);
+                    System.out.println("Item Success : "+result.getAttributes());
+                }catch (Exception e){
 
-            PutItemResult result=ddb.putItem(putItemRequest);
-            System.out.println("Item Success : "+result.getAttributes());
+                    new AddItem_Task().execute();
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Toast.makeText(dynamo_db.this, "Press the Button again...", Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
+                }
+
+
+
+
+
+
+
             return null;
         }
     }
@@ -258,16 +295,42 @@ public class DynamoDB extends AppCompatActivity {
             gi.add("First Name");
 
             username=sharedPreferences.getString("dispname","").replace(" ","");
+            email=sharedPreferences.getString("umail","");
 
-            System.out.println("List : "+ gi + "\n Username : "+username);
-
+            System.out.println("List : "+ gi + "\n Username : "+username  + email);
+//
             Map<String, AttributeValue> data=new HashMap<>();
+            data.put("Email",new AttributeValue().withS(email));
+            data.put("Username",new AttributeValue().withS(username));
 
 
-
-            GetItemRequest getItemRequest= new GetItemRequest().withTableName(username);
+            GetItemRequest getItemRequest= new GetItemRequest().withTableName(username).withAttributesToGet(gi).withConsistentRead(Boolean.TRUE);
+            getItemRequest.setKey(data);
+            System.out.println("ItemRequest KEy :  "+getItemRequest.getKey());
             GetItemResult result =ddb.getItem(getItemRequest);
             System.out.println("The retrieval Result : "+ result.getItem());
+
+
+
+//            ScanRequest scanRequest=new ScanRequest().withTableName(username).withSelect(email);
+//            ScanResult scanResult=ddb.scan(scanRequest);
+//
+//            System.out.println("Scan Results : "+ scanResult.getCount());
+//
+//            Map<String, AttributeValue> userdata=  scanResult.getItems().get(0);
+//
+//            System.out.println("the User Map data is : "+ userdata);
+//
+//            String retrievedUname= String.valueOf(userdata.get("Username"));
+//            String retrievedEmail=String.valueOf(userdata.get("Email"));
+//            String retreivedurl=String.valueOf(userdata.get("Url"));
+//            String retrievedFN=String.valueOf(userdata.get("First Name"));
+//
+//            System.out.println("Retrieved User name : "+ retrievedUname + retrievedEmail+retrievedFN+retreivedurl);
+
+
+
+
 
             return null;
         }

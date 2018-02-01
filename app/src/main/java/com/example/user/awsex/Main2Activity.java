@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -24,15 +25,32 @@ import com.amazonaws.mobileconnectors.s3.transferutility.TransferState;
 import com.amazonaws.mobileconnectors.s3.transferutility.TransferUtility;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.services.polly.AmazonPollyPresigningClient;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.example.user.awsex.DynamoDb.DynamoDB;
+import com.amazonaws.services.sns.AmazonSNSClient;
+import com.amazonaws.services.sns.model.PublishRequest;
+import com.amazonaws.services.sns.model.PublishResult;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSAsyncClient;
+import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.model.CreateQueueRequest;
+import com.amazonaws.services.sqs.model.GetQueueUrlRequest;
+import com.amazonaws.services.sqs.model.GetQueueUrlResult;
+import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
+import com.amazonaws.services.sqs.model.ReceiveMessageResult;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
+import com.example.user.awsex.DynamoDb.dynamo_db;
+import com.example.user.awsex.Polly.awspolly;
 import com.example.user.awsex.Rekognition.Img_Compare;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,10 +70,14 @@ public class Main2Activity extends AppCompatActivity {
     ImageView img;
     CognitoCachingCredentialsProvider credentialsProvider;
     CognitoSyncManager syncManager;
-    Button b1,b2,b3,b4;
+    Button b1,b2,b3,b4,list,polly;
     AmazonS3 s3;
     EditText keyedit;
     TransferUtility transferUtility;
+//    AmazonSQSClient sqsClient;
+    AmazonSQSAsyncClient sqsClient;
+    AmazonSNSClient snsClient;
+    GetQueueUrlResult result;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,15 +88,29 @@ public class Main2Activity extends AppCompatActivity {
         b2=(Button)findViewById(R.id.download);
         b3=(Button)findViewById(R.id.compare);
         b4=(Button)findViewById(R.id.db);
+        list=(Button)findViewById(R.id.list);
+        polly=(Button)findViewById(R.id.Polly);
         keyedit=(EditText)findViewById(R.id.editText3);
+        listView=(ListView)findViewById(R.id.keylist);
         credentialsProvider=new CognitoCachingCredentialsProvider(getApplicationContext(),
                 "us-west-2:20e04e1d-cd9d-46ca-9305-93fe4f13f312",
                 Regions.US_WEST_2);
 
 
         s3=new AmazonS3Client(credentialsProvider);
-        listView=(ListView)findViewById(R.id.keylist);
-       // new MyTask_Listing().execute();
+
+
+//        sqsClient = new AmazonSQSClient(credentialsProvider);
+        sqsClient = new AmazonSQSAsyncClient(credentialsProvider);
+        sqsClient.setRegion(Region.getRegion(Regions.US_WEST_2));
+
+        snsClient =new AmazonSNSClient(credentialsProvider);
+        snsClient.setRegion(Region.getRegion(Regions.US_WEST_2));
+
+
+
+        sqsClient.createQueueAsync(new CreateQueueRequest().withQueueName("Boww"));
+        new URL_Task().execute();
 
 
 
@@ -89,7 +125,14 @@ public class Main2Activity extends AppCompatActivity {
                 startActivityForResult(Intent.createChooser(intent, "Select Picture"), 99);
             }
         });
+        polly.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                new SQS_Task().execute();
+                //startActivity(new Intent(Main2Activity.this,awspolly.class));
 
+            }
+        });
         b1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -123,7 +166,15 @@ public class Main2Activity extends AppCompatActivity {
         b4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startActivity(new Intent(Main2Activity.this, DynamoDB.class));
+                startActivity(new Intent(Main2Activity.this, dynamo_db.class));
+            }
+        });
+        list.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                new MyTask_Listing().execute();
+
+
             }
         });
     }
@@ -149,6 +200,36 @@ public class Main2Activity extends AppCompatActivity {
 
         }
     }
+    public class URL_Task extends  AsyncTask<String, Integer, String>{
+
+        @Override
+        protected String doInBackground(String... strings) {
+            GetQueueUrlRequest request =new GetQueueUrlRequest().withQueueName("Boww");
+            result=sqsClient.getQueueUrl(request);
+            System.out.println("Url "+result.getQueueUrl());
+            return null;
+        }
+    }
+    public class SQS_Task extends  AsyncTask<String, Integer, String>{
+
+        @Override
+        protected String doInBackground(String... strings) {
+
+            /
+
+            SendMessageRequest sendMessageRequest=new SendMessageRequest().withMessageBody("Bowwwww").withQueueUrl(result.getQueueUrl());
+             SendMessageResult msresult=sqsClient.sendMessage(sendMessageRequest);
+            System.out.println("Bowwwwwww "+msresult.getMessageId());
+
+//            snsClient.createTopic("Kiruba");
+//            PublishRequest prequest=new PublishRequest().withTopicArn("arn:aws:sns:us-west-2:503719577572:Kiruba").withMessage("Bow Bow");
+//            PublishResult presult=snsClient.publish(prequest);
+//            System.out.println("published : "+presult.getMessageId());
+
+
+            return null;
+        }
+    }
     public class MyTask_S3_IMG_Upload extends AsyncTask<String , Integer, String>{
 
 
@@ -164,7 +245,12 @@ public class Main2Activity extends AppCompatActivity {
 
             metadata.setUserMetadata(usermetadata);
 
-            TransferObserver transferObserver=transferUtility.upload("awsreg",key,new File(Path),metadata);
+            String newfilepath = Environment.getExternalStorageDirectory()+"/FirstCut/subash/abs.txt";
+
+
+
+            System.out.println("TransferUtility : "+transferUtility);
+            TransferObserver transferObserver=transferUtility.upload("firstcutapplication",key,new File(newfilepath),metadata);
 //            TransferObserver transferObserver=transferUtility.upload(
 //                    "awsreg",
 //                    key,
@@ -187,10 +273,12 @@ public class Main2Activity extends AppCompatActivity {
                     System.out.println(" onProgressChanged "+percentage);
 
                     if(percentage==100){
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 Toast.makeText(Main2Activity.this, "FIle Uploaded", Toast.LENGTH_SHORT).show();
+
                             }
                         });
                     }
@@ -259,13 +347,23 @@ public class Main2Activity extends AppCompatActivity {
         @Override
         protected Integer doInBackground(Integer... integers) {
             key_list=new ArrayList<>();
-            ObjectListing objectListing=s3.listObjects("myfirstappbow");
+            ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest().withQueueUrl(result.getQueueUrl());
+            ReceiveMessageResult receiveMessageResult =sqsClient.receiveMessage(receiveMessageRequest);
+            System.out.println("BowwwwwwwResult"+ receiveMessageResult.getMessages());
+            ObjectListing objectListing=s3.listObjects("awsreg");
             for(S3ObjectSummary objectSummary:objectListing.getObjectSummaries()){
                 System.out.println("Key :"+objectSummary.getKey().toString());
                 key_list.add(objectSummary.getKey().toString());
             }
-            adapter =new ArrayAdapter<String>(getApplicationContext(),R.layout.list_item,R.id.textitem,key_list);
-            listView.setAdapter(adapter);
+            System.out.println("The list is  : "+key_list);
+          runOnUiThread(new Runnable() {
+              @Override
+              public void run() {
+                  adapter =new ArrayAdapter<String>(Main2Activity.this,R.layout.list_item,R.id.textitem,key_list);
+
+                  listView.setAdapter(adapter);
+              }
+          });
             return null;
         }
     }

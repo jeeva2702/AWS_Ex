@@ -3,8 +3,11 @@ package com.example.user.awsex.Rekognition;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;
+import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.rekognition.AmazonRekognition;
 import com.amazonaws.services.rekognition.AmazonRekognitionClient;
@@ -24,10 +27,20 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.example.user.awsex.R;
 
+import org.w3c.dom.Text;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 public class Img_Compare extends AppCompatActivity {
     CognitoCachingCredentialsProvider credentialsProvider;
     AmazonS3Client s3;
+    CompareFacesResult result;
     AmazonS3 ss3;
+    TextView tv;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,7 +57,7 @@ public class Img_Compare extends AppCompatActivity {
 //        }
 //        ListObjectsV2Result objectListing1=s3.listObjectsV2("myfirstappbow");
   //      System.out.println("key count :"+ objectListing1.getKeyCount());
-
+       tv=(TextView)findViewById(R.id.textView2);
 
         new Rcg_Process().execute();
 
@@ -53,26 +66,42 @@ public class Img_Compare extends AppCompatActivity {
     public class Rcg_Process extends AsyncTask<Integer, String, Integer>{
 
         @Override
-        protected Integer doInBackground(Integer... integers) {
+        protected Integer                doInBackground(Integer... integers) {
             AmazonRekognitionClient rekognitionClient=new AmazonRekognitionClient(credentialsProvider);
+            rekognitionClient.setRegion(Region.getRegion(Regions.US_WEST_2));
 
             Image image1=new Image();
             Image image2=new Image();
+            Image detectImage=new Image();
             S3Object s3Object=new S3Object();
             s3Object.setBucket("awsreg");
 
+            File file=new File("/storage/emulated/0/IRIS/MI_08012018_1026.jpg");
+            byte[] bytes=  new byte[(int) file.length()];
+            try {
+                FileInputStream fis=new FileInputStream(file);
+                fis.read(bytes);
+                fis.close();
+                System.out.println("The bytes stream is : "+bytes);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
 
 
-            image1.setS3Object(s3Object.withName("groimg"));
-            image2.setS3Object(s3Object.withName("indimg"));
+
+            image1.setS3Object(s3Object.withName("individual"));
+            image2.setS3Object(s3Object.withName("group"));
+
+            detectImage.setBytes(ByteBuffer.wrap(bytes));
 
 
-            DetectLabelsRequest labelsRequest=new DetectLabelsRequest(image1).withMinConfidence(60f);
+
+            DetectLabelsRequest labelsRequest=new DetectLabelsRequest(detectImage).withMinConfidence(60f);
 
 
-//            CompareFacesRequest compareFacesRequest=new CompareFacesRequest().withSourceImage(new Image().withS3Object(s3Object.withName("cmp1")))
-//                    .withTargetImage(new Image().withS3Object(s3Object.withName("cmp2"))).withSimilarityThreshold(75f);
             CompareFacesRequest compareFacesRequest=new CompareFacesRequest().withSourceImage(image1)
                     .withTargetImage(image2).withSimilarityThreshold(75f);
             System.out.println("Comparing bowwwwwww");
@@ -85,15 +114,34 @@ public class Img_Compare extends AppCompatActivity {
 
 
             try {
-//                CompareFacesResult result=rekognitionClient.compareFaces(compareFacesRequest);
-//                System.out.println("Result of Comparison : "+ result);
-                DetectLabelsResult detectLabelsResult=rekognitionClient.detectLabels(labelsRequest);
+               result=rekognitionClient.compareFaces(compareFacesRequest);
+                System.out.println("Result of Comparison : "+ result.getFaceMatches());
+
+                System.out.println("Comparison     "+ result.withFaceMatches());
+
+                final DetectLabelsResult detectLabelsResult=rekognitionClient.detectLabels(labelsRequest);
                 System.out.println("Detection Result : "+detectLabelsResult.getLabels());
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        tv.append(detectLabelsResult.toString());
+                    }
+                });
+
             }catch (InvalidS3ObjectException e){
                 System.out.println("Bowww Exception : "+ e);
             }
 
             return null;
+        }
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            super.onPostExecute(integer);
+            tv.append(result.toString());
+
+           // Toast.makeText(Img_Compare.this, result.toString(), Toast.LENGTH_LONG).show();
         }
     }
 }
